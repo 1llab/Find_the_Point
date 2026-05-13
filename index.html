@@ -13,7 +13,7 @@
     </style>
 </head>
 <body>
-    <h1>타원의 초점을 찾아라!</h1>
+    <h1>타원의 초점을 찾아라</h1>
     <canvas id="gameCanvas" width="800" height="500"></canvas>
     
     <div class="ui">
@@ -139,7 +139,7 @@
             // 점수화 (오차 합이 0일 때 100점, 멀어질수록 감점)
             const score = Math.max(0, 100 - Math.floor(totalDist / 1.5));
             
-            let message = score === 100 ? "완벽합니다! 🎯" : score > 80 ? "훌륭해요! 👍" : "조금 더 연습해볼까요?";
+            let message = score === 100 ? "완벽합니다!🎯" : score >= 80 ? "훌륭합니다!👍" : "연습이 좀 더 필요할 듯...";
             document.getElementById('result').innerHTML = `점수: ${score}점 (${message})`;
         }
 
