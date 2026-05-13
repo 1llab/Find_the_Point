@@ -97,20 +97,25 @@
             });
         }
 
-        // --- 마우스/터치 드래그 로직 ---
-        canvas.addEventListener('mousedown', e => {
+
+        // --- 마우스/터치 통합 드래그 로직 (Pointer Events) ---
+
+        canvas.addEventListener('pointerdown', e => {
             const rect = canvas.getBoundingClientRect();
             const mx = e.clientX - rect.left;
             const my = e.clientY - rect.top;
-
-            // 클릭한 위치에 점이 있는지 확인 (반지름 15px 내외)
+        
+            // 포인터 캡처 설정 (마우스가 캔버스를 벗어나도 드래그 유지)
+            canvas.setPointerCapture(e.pointerId);
+        
             playerPoints.forEach((p, idx) => {
                 const dist = Math.hypot(p.x - mx, p.y - my);
-                if (dist < 15) draggingIdx = idx;
+                // 모바일은 손가락이 두꺼우므로 판정 범위를 30 정도로 넓히면 좋습니다.
+                if (dist < 30) draggingIdx = idx;
             });
         });
-
-        window.addEventListener('mousemove', e => {
+        
+        window.addEventListener('pointermove', e => {
             if (draggingIdx !== -1) {
                 const rect = canvas.getBoundingClientRect();
                 playerPoints[draggingIdx].x = e.clientX - rect.left;
@@ -118,10 +123,13 @@
                 draw();
             }
         });
-
-        window.addEventListener('mouseup', () => {
-            draggingIdx = -1;
-            draw();
+        
+        window.addEventListener('pointerup', e => {
+            if (draggingIdx !== -1) {
+                canvas.releasePointerCapture(e.pointerId);
+                draggingIdx = -1;
+                draw();
+            }
         });
 
         function checkAnswer() {
