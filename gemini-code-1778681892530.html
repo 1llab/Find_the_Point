@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>타원 초점 맞추기 게임</title>
+    <style>
+        body { display: flex; flex-direction: column; align-items: center; background: #f8f9fa; font-family: 'Pretendard', sans-serif; color: #333; }
+        canvas { background: #fff; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); cursor: default; touch-action: none; }
+        .ui { margin-top: 20px; text-align: center; }
+        button { padding: 12px 24px; font-size: 16px; border: none; border-radius: 8px; background: #3498db; color: white; cursor: pointer; transition: 0.2s; margin: 5px; }
+        button:hover { background: #2980b9; }
+        .score-box { font-size: 20px; font-weight: bold; margin: 10px; color: #2c3e50; min-height: 30px; }
+    </style>
+</head>
+<body>
+    <h1>타원의 초점을 찾아라!</h1>
+    <canvas id="gameCanvas" width="800" height="500"></canvas>
+    
+    <div class="ui">
+        <div id="result" class="score-box"></div>
+        <button onclick="checkAnswer()">결과 확인</button>
+        <button onclick="initGame()" style="background: #95a5a6;">새로운 타원</button>
+        <p>빨간 점 두 개를 드래그해서 초점 위치에 놓으세요.</p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let ellipse = {};
+        let foci = [];
+        let playerPoints = [];
+        let draggingIdx = -1; // 현재 드래그 중인 점의 인덱스
+
+        function initGame() {
+            document.getElementById('result').innerHTML = '';
+            draggingIdx = -1;
+
+            // 1. 랜덤한 타원 생성 (위치, 크기, 회전)
+            const margin = 150;
+            ellipse = {
+                cx: Math.random() * (canvas.width - margin * 2) + margin,
+                cy: Math.random() * (canvas.height - margin * 2) + margin,
+                a: Math.random() * 100 + 80,  // 장반경
+                b: Math.random() * 50 + 30,   // 단반경
+                rotation: Math.random() * Math.PI // 0 ~ 180도 랜덤 회전
+            };
+
+            // 2. 실제 초점 위치 계산 (회전 변환 포함)
+            const c = Math.sqrt(ellipse.a**2 - ellipse.b**2);
+            
+            // 회전 전 로컬 초점 좌표: (-c, 0)과 (c, 0)
+            // 회전 변환 공식 적용
+            foci = [-c, c].map(localX => ({
+                x: ellipse.cx + localX * Math.cos(ellipse.rotation),
+                y: ellipse.cy + localX * Math.sin(ellipse.rotation)
+            }));
+
+            // 3. 플레이어 점 초기 위치 (임의 배치)
+            playerPoints = [
+                { x: 50, y: 50 },
+                { x: 50, y: 100 }
+            ];
+
+            draw();
+        }
+
+        function draw(showAnswer = false) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 타원 그리기
+            ctx.beginPath();
+            ctx.ellipse(ellipse.cx, ellipse.cy, ellipse.a, ellipse.b, ellipse.rotation, 0, 2 * Math.PI);
+            ctx.strokeStyle = '#3498db';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // 정답 표시 (확인 버튼 눌렀을 때만)
+            if (showAnswer) {
+                foci.forEach(f => {
+                    ctx.beginPath();
+                    ctx.arc(f.x, f.y, 5, 0, Math.PI * 2);
+                    ctx.fillStyle = '#2ecc71';
+                    ctx.fill();
+                });
+            }
+
+            // 플레이어 점 그리기
+            playerPoints.forEach((p, idx) => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+                ctx.fillStyle = (draggingIdx === idx) ? '#c0392b' : '#e74c3c';
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+        }
+
+        // --- 마우스/터치 드래그 로직 ---
+        canvas.addEventListener('mousedown', e => {
+            const rect = canvas.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+
+            // 클릭한 위치에 점이 있는지 확인 (반지름 15px 내외)
+            playerPoints.forEach((p, idx) => {
+                const dist = Math.hypot(p.x - mx, p.y - my);
+                if (dist < 15) draggingIdx = idx;
+            });
+        });
+
+        window.addEventListener('mousemove', e => {
+            if (draggingIdx !== -1) {
+                const rect = canvas.getBoundingClientRect();
+                playerPoints[draggingIdx].x = e.clientX - rect.left;
+                playerPoints[draggingIdx].y = e.clientY - rect.top;
+                draw();
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            draggingIdx = -1;
+            draw();
+        });
+
+        function checkAnswer() {
+            draw(true); // 정답 초점 공개
+
+            // 가장 가까운 초점끼리 매칭하여 거리 계산
+            const d1 = Math.hypot(playerPoints[0].x - foci[0].x, playerPoints[0].y - foci[0].y);
+            const d2 = Math.hypot(playerPoints[1].x - foci[1].x, playerPoints[1].y - foci[1].y);
+            
+            const altD1 = Math.hypot(playerPoints[0].x - foci[1].x, playerPoints[0].y - foci[1].y);
+            const altD2 = Math.hypot(playerPoints[1].x - foci[0].x, playerPoints[1].y - foci[0].y);
+            
+            const totalDist = Math.min(d1 + d2, altD1 + altD2);
+            
+            // 점수화 (오차 합이 0일 때 100점, 멀어질수록 감점)
+            const score = Math.max(0, 100 - Math.floor(totalDist / 1.5));
+            
+            let message = score === 100 ? "완벽합니다! 🎯" : score > 80 ? "훌륭해요! 👍" : "조금 더 연습해볼까요?";
+            document.getElementById('result').innerHTML = `점수: ${score}점 (${message})`;
+        }
+
+        initGame();
+    </script>
+</body>
+</html>
