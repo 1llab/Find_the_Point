@@ -38,17 +38,21 @@
 
             const minA = 120; // 최소 장반경
             const maxA = 200; // 최대 장반경
-            const minB = 60;  // 최소 단반경
+
+            const a = Math.random() * (maxA - minA) + minA; // 장반경 결정
+            const b = Math.random() * (a - 60) + 30; // 단반경 결정
 
            ellipse = {
                 cx: Math.random() * 200 + 300, // 300~500 사이 (중앙 근처)
                 cy: Math.random() * 100 + 200, // 200~300 사이
-                a: Math.random() * (maxA - minA) + minA,
-                b: Math.random() * (ellipse.a - 20 - minB) + minB, // a보다는 항상 작게
+                a: a,
+                b: b,
                 rotation: Math.random() * Math.PI
             };
         
-            const c = Math.sqrt(ellipse.a**2 - ellipse.b**2);
+            const cSquared = Math.max(0, ellipse.a**2 - ellipse.b**2);
+            const c = Math.sqrt(cSquared);
+    
             foci = [-c, c].map(localX => ({
                 x: ellipse.cx + localX * Math.cos(ellipse.rotation),
                 y: ellipse.cy + localX * Math.sin(ellipse.rotation)
